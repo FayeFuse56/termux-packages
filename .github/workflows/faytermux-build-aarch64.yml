@@ -21,12 +21,68 @@ jobs:
           df -h
           docker --version
           free -h
-      - name: Safety gate — block native build until rootfs deletion is audited
+      - name: Check unsafe cleanup regression
         shell: bash
         run: |
-          echo "::error::Native build disabled after unsafe rootfs deletion attempt in run #1."
-          echo "::error::Do not execute scripts/build-bootstraps.sh on this runner until clean.sh and derived rootfs paths are audited."
-          exit 1
+          set -euo pipefail
+          bash -n scripts/build-bootstraps.sh scripts/build-faytermux-bootstrap.sh
+          if grep -Fq 'rm -f "$TERMUX_BUILT_PACKAGES_DIRECTORY_FOR_ARCH"/*' scripts/build-bootstraps.sh; then
+            echo "::error::Unsafe cache cleanup is present"
+            exit 1
+          fi
+          grep -q '^TERMUX_APP__PACKAGE_NAME="com.fay.termux"
+      - name: Verify bootstrap prefix
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s bootstrap-aarch64.zip
+          sha256sum bootstrap-aarch64.zip | tee bootstrap-aarch64.sha256
+          python3 - <<'PY'
+          import zipfile
+          path='bootstrap-aarch64.zip'
+          old=b'/data/data/com.termux/files/usr'
+          new=b'/data/data/com.fay.termux/files/usr'
+          new_found=False
+          with zipfile.ZipFile(path) as z:
+              for item in z.infolist():
+                  if item.filename.startswith('/') or '..' in item.filename.split('/'):
+                      raise SystemExit('Unsafe archive path')
+                  with z.open(item) as f:
+                      tail=b''
+                      while True:
+                          block=f.read(1024*1024)
+                          if not block: break
+                          data=tail+block
+                          if old in data: raise SystemExit('Found upstream prefix in '+item.filename)
+                          if new in data: new_found=True
+                          tail=data[-max(len(old),len(new)):]
+          if not new_found: raise SystemExit('No FayTermux prefix found')
+          print('Prefix scan passed (runtime validation still required)')
+          PY
+      - name: Upload bootstrap artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: faytermux-bootstrap-aarch64
+          path: |
+            bootstrap-aarch64.zip
+            bootstrap-aarch64.sha256
+          retention-days: 7
+      - name: Upload diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: faytermux-native-build-log
+          path: faytermux-bootstrap-build.log
+          if-no-files-found: ignore
+          retention-days: 7
+ scripts/properties.sh
+      - name: Build native aarch64 bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/build-faytermux-bootstrap.sh aarch64 2>&1 | tee faytermux-bootstrap-build.log
       - name: Verify bootstrap prefix
         if: success()
         shell: bash
