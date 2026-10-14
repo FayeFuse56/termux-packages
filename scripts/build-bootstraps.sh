@@ -396,20 +396,9 @@ main() {
 	for TERMUX_ARCH in "${TERMUX_ARCHITECTURES[@]}"; do
 		termux_step_handle_buildarch
 
-		if [[ $FORCE_BUILD_PACKAGES == "1" ]]; then
-			# Fail closed: unset/empty directories must never expand to /*.
-			# The buildarch helper does not guarantee this variable is populated.
-			if [[ -z "${TERMUX_BUILT_PACKAGES_DIRECTORY_FOR_ARCH:-}" ]] ||
-			   [[ "$TERMUX_BUILT_PACKAGES_DIRECTORY_FOR_ARCH" != "$TERMUX_BUILT_PACKAGES_DIRECTORY/"* ]] ||
-			   [[ "$TERMUX_BUILT_PACKAGES_DIRECTORY_FOR_ARCH" == "/" ]] ||
-			   [[ "$TERMUX_BUILT_DEBS_DIRECTORY" != "$TERMUX_PACKAGES_DIRECTORY/output" ]]; then
-				echo "Unsafe package cleanup directory; refusing force build" >&2
-				return 1
-			fi
-			mkdir -p "$TERMUX_BUILT_PACKAGES_DIRECTORY_FOR_ARCH" "$TERMUX_BUILT_DEBS_DIRECTORY"
-			find "$TERMUX_BUILT_PACKAGES_DIRECTORY_FOR_ARCH" -mindepth 1 -maxdepth 1 -type f -delete
-			find "$TERMUX_BUILT_DEBS_DIRECTORY" -mindepth 1 -maxdepth 1 -type f -delete
-		fi
+		# -f is already forwarded to build-package.sh via BUILD_PACKAGE_OPTIONS.
+		# Do not delete caches here: the former cleanup could expand an unset
+		# directory to /* and attempt to remove the runner filesystem.
 
 		BOOTSTRAP_ROOTFS="$BOOTSTRAP_TMPDIR/rootfs-${TERMUX_ARCH}"
 		BOOTSTRAP_PKGDIR="$BOOTSTRAP_TMPDIR/packages-${TERMUX_ARCH}"
