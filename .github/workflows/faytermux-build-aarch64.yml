@@ -21,11 +21,12 @@ jobs:
           df -h
           docker --version
           free -h
-      - name: Build native aarch64 bootstrap
+      - name: Safety gate — block native build until rootfs deletion is audited
         shell: bash
         run: |
-          set -euo pipefail
-          bash scripts/build-faytermux-bootstrap.sh aarch64 2>&1 | tee faytermux-bootstrap-build.log
+          echo "::error::Native build disabled after unsafe rootfs deletion attempt in run #1."
+          echo "::error::Do not execute scripts/build-bootstraps.sh on this runner until clean.sh and derived rootfs paths are audited."
+          exit 1
       - name: Verify bootstrap prefix
         if: success()
         shell: bash
