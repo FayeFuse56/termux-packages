@@ -396,10 +396,9 @@ main() {
 	for TERMUX_ARCH in "${TERMUX_ARCHITECTURES[@]}"; do
 		termux_step_handle_buildarch
 
-		if [[ $FORCE_BUILD_PACKAGES == "1" ]]; then
-			rm -f "$TERMUX_BUILT_PACKAGES_DIRECTORY_FOR_ARCH"/*
-			rm -f "$TERMUX_BUILT_DEBS_DIRECTORY"/*
-		fi
+		# -f is already forwarded to build-package.sh via BUILD_PACKAGE_OPTIONS.
+		# Do not delete caches here: the former cleanup could expand an unset
+		# directory to /* and attempt to remove the runner filesystem.
 
 		BOOTSTRAP_ROOTFS="$BOOTSTRAP_TMPDIR/rootfs-${TERMUX_ARCH}"
 		BOOTSTRAP_PKGDIR="$BOOTSTRAP_TMPDIR/packages-${TERMUX_ARCH}"

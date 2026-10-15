@@ -1,0 +1,26 @@
+name: FayTermux native source preflight
+
+on:
+  push:
+    branches:
+      - faytermux/native-prefix
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  validate-native-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shell entrypoint
+        run: bash -n scripts/build-faytermux-bootstrap.sh
+      - name: Check FayTermux package identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^TERMUX_APP__PACKAGE_NAME="com.fay.termux"$' scripts/properties.sh
+          bash -c 'source scripts/properties.sh; test "$TERMUX_APP__PACKAGE_NAME" = "com.fay.termux"'
+      - name: Confirm upstream bootstrap builder supports architecture option
+        run: grep -q -- '--architectures' scripts/build-bootstraps.sh

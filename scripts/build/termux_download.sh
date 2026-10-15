@@ -37,11 +37,11 @@ termux_download() {
 	local TMPFILE
 	local -a CURL_OPTIONS=(
 		--fail               # Consider 4xx and 5xx responses as failures
-		--retry 5            # Retry up to 5 times on transient failures
+		--retry 8            # Retry transient failures, including intermittent upstream resets
 		--retry-connrefused  # Also retry on refused connections
-		--retry-delay 5      # Wait 5 seconds between retries
+		--retry-delay 10     # Allow the remote endpoint time to recover
 		--connect-timeout 30 # Wait at most 30 seconds for a connection to be established
-		--retry-max-time 120 # Stop retrying if it's still failing after 120 seconds
+		--retry-max-time 360 # Allow longer recovery on GitHub Actions runners
 		--speed-limit 1000   # Expect at least 1000 Bytes per second
 		--speed-time 60      # Fail if the minimum speed isn't met for at least 60 seconds
 		--location           # Follow redirects
